@@ -3,6 +3,7 @@ const express = require("express")
 const port = process.env.PORT || 5000
 const app = express()
 const cors = require("cors")
+const cookieParser = require('cookie-parser')
 const jwt = require("jsonwebtoken")
 
 // middlewere
@@ -48,6 +49,8 @@ const client = new MongoClient(uri, {
     }
 });
 
+
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
@@ -55,7 +58,21 @@ async function run() {
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
 
-        
+        const apartmentCollection = client.db("centerPoint").collection("apartments")
+
+        // all apartment data
+        app.get("/api/apartments", async (req, res) => {
+            const limit = parseInt(req.query.limit) || 6
+            const page = parseInt(req.query.page) || 0
+
+            const skip = (limit * page)
+
+            const result = await apartmentCollection.find().skip(skip).limit(limit).toArray()
+            const totalData = await apartmentCollection.estimatedDocumentCount()
+            res.send([result, totalData])
+
+        })
+
 
         // user token api
         app.post("/api/user/token", async (req, res) => {
