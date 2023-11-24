@@ -17,7 +17,7 @@ app.use(cookieParser())
 
 // token varify
 const varifyToekn = (req, res, next) => {
-    const token = req.cookies.token
+    const token = req.query.token
     if (!token) {
         res.status(401).send({ messege: "unAuthorized Access" })
         return
@@ -78,27 +78,33 @@ async function run() {
         // user token api
         app.post("/api/user/token", async (req, res) => {
             const email = req.body
-            const token = jwt.sign(email, process.env.SECRET, { expiresIn: "1h" })
-            res.cookie("token", token, { httpOnly: true, secure: true, sameSite: 'none' }).send({ "messege": "success" })
+            const token = jwt.sign(email, process.env.SECRET, { expiresIn: "365d" })
+            res.send(token)
         })
 
         app.put("/api/add/user/:email", async (req, res) => {
             const email = req.params.email
-            const body = req.body
 
-            const isExist = await usersCollection.find(email).toArray()
-            if (isExist) {
+            const body = req.body
+            const timestamp = { timestamp: Date.now() }
+            const accountCreatedDate = Date.now()
+            const updateUser = {
+                $set: {
+                    ...body, ...timestamp
+                }
+            }
+
+            const isExist = await usersCollection.find({ email: email }).toArray()
+
+            if (isExist.length !== 0) {
+                const update = await usersCollection.updateOne({ email: email }, updateUser)
                 return res.send({ isExist: true })
             }
 
-            const date = { timestamp: Date.now() }
 
-            const update = {
-                $set: {
-                    ...body, ...date
-                }
-            }
-            const result = await usersCollection.updateOne({ email: email }, update)
+
+
+            const result = await usersCollection.insertOne({ ...body, create: accountCreatedDate, ...timestamp })
             res.send(result)
 
         })
