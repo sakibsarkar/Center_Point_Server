@@ -171,8 +171,8 @@ async function run() {
 
 
 
-        // agreement rejected
-        app.put("/api/agreement/rejected", varifyToekn, async (req, res) => {
+        // agreement req status changed
+        app.put("/api/agreement/status", varifyToekn, async (req, res) => {
 
             const role = req.query.role
             const id = req.query.id
@@ -192,6 +192,30 @@ async function run() {
             res.send(result)
 
         })
+
+
+        // user to member
+        app.put("/api/user/role/update", varifyToekn, async (req, res) => {
+            const role = req.query.role
+            const email = req.query.email
+            if (role !== "admin" || !role) {
+                return res.status(401).send({ messege: "unAurhorized" })
+            }
+
+            const find = { email: email }
+
+            const update = {
+                $set: {
+                    role: "member"
+                }
+            }
+
+            const result = await usersCollection.updateOne(find, update)
+            res.send(result)
+
+
+        })
+
 
 
 
