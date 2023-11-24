@@ -28,6 +28,7 @@ const varifyToekn = (req, res, next) => {
             return res.status(403).send({ messege: "Access Forbidden" })
         }
         req.user = decoded
+
         next()
     })
 
@@ -61,6 +62,7 @@ async function run() {
         const apartmentCollection = client.db("centerPoint").collection("apartments")
         const usersCollection = client.db("centerPoint").collection("users")
         const announcementsCollection = client.db("centerPoint").collection("announcements")
+        const agreementsCollection = client.db("centerPoint").collection("agreements")
 
         // all apartment data
         app.get("/api/apartments", async (req, res) => {
@@ -118,9 +120,51 @@ async function run() {
         })
 
 
+        // all members data
+        app.get("/api/all/members", async (req, res) => {
+            const role = req.query.role
+            if (role !== "admin" || !role) {
+                return res.status(401).send({ messege: "unAurhorized" })
+            }
+            const result = await usersCollection.find({ role: "member" }).toArray()
+            res.send(result)
+
+        })
+
+
         // Announcements
         app.get("/api/announcements", varifyToekn, async (req, res) => {
             const result = await announcementsCollection.find().toArray()
+
+            res.send(result)
+        })
+
+        //agreement data post
+        app.post("/api/agreement", varifyToekn, async (req, res) => {
+
+            const data = req.body
+            const result = await agreementsCollection.insertOne(data)
+            res.send(result)
+        })
+
+        // all agreement data 
+
+        app.get("/api/agreementReq", varifyToekn, async (req, res) => {
+            const role = req.query.role
+            if (role !== "admin" || !role) {
+                return res.status(401).send({ messege: "unAurhorized" })
+            }
+
+            const result = await agreementsCollection.find({ status: "pending" }).toArray()
+            res.send(result)
+        })
+
+
+        // get user role
+
+        app.get("/api/user/role", varifyToekn, async (req, res) => {
+            const email = req.query.email
+            const result = await usersCollection.findOne({ email: email }, { projection: { _id: 0, role: 1 } })
 
             res.send(result)
         })
