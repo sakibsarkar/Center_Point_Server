@@ -60,6 +60,7 @@ async function run() {
 
         const apartmentCollection = client.db("centerPoint").collection("apartments")
         const usersCollection = client.db("centerPoint").collection("users")
+        const announcementsCollection = client.db("centerPoint").collection("announcements")
 
         // all apartment data
         app.get("/api/apartments", async (req, res) => {
@@ -109,6 +110,20 @@ async function run() {
 
         })
 
+        // single user data
+        app.get("/api/user", varifyToekn, async (req, res) => {
+            const email = req.query.email
+            const result = await usersCollection.findOne({ email: email })
+            res.send(result)
+        })
+
+
+        // Announcements
+        app.get("/api/announcements", varifyToekn, async (req, res) => {
+            const result = await announcementsCollection.find().toArray()
+
+            res.send(result)
+        })
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
