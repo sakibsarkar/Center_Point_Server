@@ -98,9 +98,13 @@ async function run() {
             }
 
             const isExist = await usersCollection.find({ email: email }).toArray()
-
+            const existUpdate = {
+                $set: {
+                    timestamp: Date.now()
+                }
+            }
             if (isExist.length !== 0) {
-                const update = await usersCollection.updateOne({ email: email }, updateUser)
+                const update = await usersCollection.updateOne({ email: email }, existUpdate)
                 return res.send({ isExist: true })
             }
 
@@ -214,6 +218,36 @@ async function run() {
             res.send(result)
 
 
+        })
+
+
+        // book the apartment
+        app.put("/api/apartment/book", varifyToekn, async (req, res) => {
+            const role = req.query.role
+            const apartmentId = req.query.id
+            if (role !== "admin" || !role) {
+                return res.status(401).send({ messege: "unAurhorized" })
+            }
+
+            const find = { _id: new ObjectId(apartmentId) }
+            const update = {
+                $set: {
+                    booked: "true"
+                }
+            }
+
+            const result = apartmentCollection.updateOne(find, update)
+            res.send(result)
+        })
+
+
+        // dashboard details
+        app.get("/api/dashboard/data", varifyToekn, async (req, res) => {
+            const total = await apartmentCollection.estimatedDocumentCount()
+            const totalBooked = await apartmentCollection.find({ booked: "true" }).toArray()
+            const totalUser = await usersCollection.find({ role: "user" }).toArray()
+            const totalMember = await usersCollection.find({ role: "member" }).toArray()
+            res.send({ total, totalBooked, totalBooked: totalBooked.length, totalUser: totalUser.length, totalMember: totalMember.length })
         })
 
 
