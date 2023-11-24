@@ -59,6 +59,7 @@ async function run() {
         // await client.db("admin").command({ ping: 1 });
 
         const apartmentCollection = client.db("centerPoint").collection("apartments")
+        const usersCollection = client.db("centerPoint").collection("users")
 
         // all apartment data
         app.get("/api/apartments", async (req, res) => {
@@ -79,6 +80,27 @@ async function run() {
             const email = req.body
             const token = jwt.sign(email, process.env.SECRET, { expiresIn: "1h" })
             res.cookie("token", token, { httpOnly: true, secure: true, sameSite: 'none' }).send({ "messege": "success" })
+        })
+
+        app.put("/api/add/user/:email", async (req, res) => {
+            const email = req.params.email
+            const body = req.body
+
+            const isExist = await usersCollection.find(email).toArray()
+            if (isExist) {
+                return res.send({ isExist: true })
+            }
+
+            const date = { timestamp: Date.now() }
+
+            const update = {
+                $set: {
+                    ...body, ...date
+                }
+            }
+            const result = await usersCollection.updateOne({ email: email }, update)
+            res.send(result)
+
         })
 
 
