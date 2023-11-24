@@ -38,7 +38,7 @@ const varifyToekn = (req, res, next) => {
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0.xbiw867.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -168,6 +168,32 @@ async function run() {
 
             res.send(result)
         })
+
+
+
+        // agreement rejected
+        app.put("/api/agreement/rejected", varifyToekn, async (req, res) => {
+
+            const role = req.query.role
+            const id = req.query.id
+            if (role !== "admin" || !role) {
+                return res.status(401).send({ messege: "unAurhorized" })
+            }
+
+            const update = {
+                $set: {
+                    status: "checked"
+                }
+            }
+
+            const find = { _id: new ObjectId(id) }
+
+            const result = await agreementsCollection.updateOne(find, update)
+            res.send(result)
+
+        })
+
+
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
