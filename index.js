@@ -38,6 +38,9 @@ const varifyToekn = (req, res, next) => {
 
 
 
+
+
+
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0.xbiw867.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -63,6 +66,22 @@ async function run() {
         const usersCollection = client.db("centerPoint").collection("users")
         const announcementsCollection = client.db("centerPoint").collection("announcements")
         const agreementsCollection = client.db("centerPoint").collection("agreements")
+
+
+        const varifyAdmin = async (req, res, next) => {
+            const email = req?.user?.email
+            console.log("f");
+
+            const result = await usersCollection.findOne({ email: email })
+
+            if (!result || result?.role !== "admin") {
+                return res.status(401).send({ messege: "unauthorized access" })
+            }
+
+            next()
+
+        }
+
 
         // all apartment data
         app.get("/api/apartments", async (req, res) => {
@@ -189,15 +208,11 @@ async function run() {
         // ---------member to user--------------
         // * member will become user
         // * member booked room will be available
+        // * remove apartement from user 
 
-        app.put("api/member/delete", varifyToekn, async (req, res) => {
+        app.put("/api/member/delete", varifyToekn, varifyAdmin, async (req, res) => {
             const email = req.query.email
             const apartmentId = req.query.aptId
-            const role = req.query.role
-
-            if (!role || role !== "admin") {
-                return res.status(401).send({ messege: "unAurhorized" })
-            }
 
             //---------point 1_--------
             const roleUpdate = {
@@ -221,8 +236,15 @@ async function run() {
             const updateApt = await apartmentCollection.updateOne(apartmentFind, apartmentUpdate)
 
 
+            //---------part 3 -----------
+            const aptUpdate = {
+                $set: {
+                    apartment: ""
+                }
+            }
+            const removeApartmentFromUser = await usersCollection.updateOne({ email: email }, aptUpdate)
 
-
+            res.send(removeApartmentFromUser)
 
 
         })
@@ -246,7 +268,7 @@ async function run() {
 
 
         // agreement req status changed
-        app.put("/api/agreement/status", varifyToekn, async (req, res) => {
+        app.put("/api/agreement/status", varifyToekn, varifyAdmin, async (req, res) => {
 
             const role = req.query.role
             const id = req.query.id
@@ -269,7 +291,7 @@ async function run() {
 
 
         // user to member
-        app.put("/api/user/role/update", varifyToekn, async (req, res) => {
+        app.put("/api/user/role/update", varifyToekn, varifyAdmin, async (req, res) => {
             const role = req.query.role
             const email = req.query.email
             if (role !== "admin" || !role) {
@@ -292,7 +314,7 @@ async function run() {
 
 
         // book the apartment
-        app.put("/api/apartment/book", varifyToekn, async (req, res) => {
+        app.put("/api/apartment/book", varifyToekn, varifyAdmin, async (req, res) => {
             const role = req.query.role
             const apartmentId = req.query.id
             if (role !== "admin" || !role) {
