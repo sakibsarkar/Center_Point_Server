@@ -16,7 +16,7 @@ app.use(cookieParser())
 
 
 // token varify
-const varifyToekn = (req, res, next) => {
+const varifyToken = (req, res, next) => {
     const token = req.query.token
     if (!token) {
         res.status(401).send({ messege: "unAuthorized Access" })
@@ -66,15 +66,29 @@ async function run() {
         const usersCollection = client.db("centerPoint").collection("users")
         const announcementsCollection = client.db("centerPoint").collection("announcements")
         const agreementsCollection = client.db("centerPoint").collection("agreements")
+        const couponsCollection = client.db("centerPoint").collection("coupons")
 
 
         const varifyAdmin = async (req, res, next) => {
             const email = req?.user?.email
-            console.log("f");
+
 
             const result = await usersCollection.findOne({ email: email })
 
             if (!result || result?.role !== "admin") {
+                return res.status(401).send({ messege: "unauthorized access" })
+            }
+
+            next()
+
+        }
+        const varifyMember = async (req, res, next) => {
+            const email = req?.user?.email
+
+
+            const result = await usersCollection.findOne({ email: email })
+           
+            if (!result || result?.role !== "member") {
                 return res.status(401).send({ messege: "unauthorized access" })
             }
 
@@ -136,7 +150,7 @@ async function run() {
         })
 
         // single user data
-        app.get("/api/user", varifyToekn, async (req, res) => {
+        app.get("/api/user", varifyToken, async (req, res) => {
             const email = req.query.email
             const result = await usersCollection.findOne({ email: email })
             res.send(result)
@@ -144,7 +158,7 @@ async function run() {
 
 
         // all members data
-        app.get("/api/all/members", varifyToekn, async (req, res) => {
+        app.get("/api/all/members", varifyToken, async (req, res) => {
             const role = req.query.role
             if (role !== "admin" || !role) {
                 return res.status(401).send({ messege: "unAurhorized" })
@@ -156,14 +170,14 @@ async function run() {
 
 
         // Announcements
-        app.get("/api/announcements", varifyToekn, async (req, res) => {
+        app.get("/api/announcements", varifyToken, async (req, res) => {
             const result = await announcementsCollection.find().toArray()
 
             res.send(result)
         })
 
         //agreement data post
-        app.post("/api/agreement", varifyToekn, async (req, res) => {
+        app.post("/api/agreement", varifyToken, async (req, res) => {
 
             const data = req.body
             const result = await agreementsCollection.insertOne(data)
@@ -172,7 +186,7 @@ async function run() {
 
         // all agreement data 
 
-        app.get("/api/agreementReq", varifyToekn, async (req, res) => {
+        app.get("/api/agreementReq", varifyToken, async (req, res) => {
             const role = req.query.role
             if (role !== "admin" || !role) {
                 return res.status(401).send({ messege: "unAurhorized" })
@@ -184,7 +198,7 @@ async function run() {
 
 
         // -------------member apartment ----------------
-        app.get("/api/member/apartment", varifyToekn, async (req, res) => {
+        app.get("/api/member/apartment", varifyToken, async (req, res) => {
             const email = req.query.email
             const role = req.query.role
 
@@ -192,7 +206,7 @@ async function run() {
                 return res.status(401).send({ messege: "unAurhorized" })
             }
 
-            console.log(req.user.email);
+           
 
             const find = {
                 $and: [
@@ -210,7 +224,7 @@ async function run() {
         // * member booked room will be available
         // * remove apartement from user 
 
-        app.put("/api/member/delete", varifyToekn, varifyAdmin, async (req, res) => {
+        app.put("/api/member/delete", varifyToken, varifyAdmin, async (req, res) => {
             const email = req.query.email
             const apartmentId = req.query.aptId
 
@@ -251,6 +265,39 @@ async function run() {
 
 
 
+        app.post("/api/makeAnnouncement", varifyToken, varifyAdmin, async (req, res) => {
+            const body = req.body
+            const result = await announcementsCollection.insertOne(body)
+            res.send(result)
+
+        })
+
+
+        //  memberProfile data
+
+        app.get("/api/member/data", varifyToken, varifyMember, async (req, res) => {
+            const email = req.query.email
+            if (!email) {
+                return
+            }
+
+            if (req?.user?.email !== email) {
+                return res.status(403).send({ messege: "forbiden access" })
+            }
+
+            const result = await usersCollection.findOne({ email: email })
+            res.send(result)
+        })
+
+
+        // member apartment details
+        app.get("/api/member/apartmentData", varifyToken, varifyMember, async (req, res) => {
+            const id = req.query.id
+            const result = await apartmentCollection.findOne({ _id: new ObjectId(id) })
+            res.send(result)
+        })
+
+
 
 
 
@@ -258,7 +305,7 @@ async function run() {
 
         // get user role
 
-        app.get("/api/user/role", varifyToekn, async (req, res) => {
+        app.get("/api/user/role", varifyToken, async (req, res) => {
             const email = req.query.email
             const result = await usersCollection.findOne({ email: email }, { projection: { _id: 0, role: 1 } })
 
@@ -268,7 +315,7 @@ async function run() {
 
 
         // agreement req status changed
-        app.put("/api/agreement/status", varifyToekn, varifyAdmin, async (req, res) => {
+        app.put("/api/agreement/status", varifyToken, varifyAdmin, async (req, res) => {
 
             const role = req.query.role
             const id = req.query.id
@@ -291,7 +338,7 @@ async function run() {
 
 
         // user to member
-        app.put("/api/user/role/update", varifyToekn, varifyAdmin, async (req, res) => {
+        app.put("/api/user/role/update", varifyToken, varifyAdmin, async (req, res) => {
             const role = req.query.role
             const email = req.query.email
             if (role !== "admin" || !role) {
@@ -314,7 +361,7 @@ async function run() {
 
 
         // book the apartment
-        app.put("/api/apartment/book", varifyToekn, varifyAdmin, async (req, res) => {
+        app.put("/api/apartment/book", varifyToken, varifyAdmin, async (req, res) => {
             const role = req.query.role
             const apartmentId = req.query.id
             if (role !== "admin" || !role) {
@@ -334,7 +381,7 @@ async function run() {
 
 
         // dashboard details
-        app.get("/api/dashboard/data", varifyToekn, async (req, res) => {
+        app.get("/api/dashboard/data", varifyToken, async (req, res) => {
             const total = await apartmentCollection.estimatedDocumentCount()
             const totalBooked = await apartmentCollection.find({ booked: "true" }).toArray()
             const totalUser = await usersCollection.find({ role: "user" }).toArray()
@@ -345,8 +392,9 @@ async function run() {
 
 
         // add aptId to the user data
-        app.put("/api/user/booked", varifyToekn, async (req, res) => {
+        app.put("/api/user/booked", varifyToken, async (req, res) => {
             const aptId = req.query.aptID
+            const agreementDate = req.query.agreeDate
             const role = req.query.role
             const email = req.query.email
             if (role !== "admin" || !role) {
@@ -357,13 +405,53 @@ async function run() {
 
             const update = {
                 $set: {
-                    apartment: aptId
+                    apartment: aptId,
+                    agreementDate: agreementDate
                 }
             }
 
             const reult = await usersCollection.updateOne(find, update)
             res.send(reult)
 
+        })
+
+
+
+        // coupons
+        app.get("/api/coupons", async (req, res) => {
+            const result = await couponsCollection.find().toArray()
+            res.send(result)
+        })
+
+
+        // change coupon validity
+        app.put("/api/coupon/unactive", varifyToken, varifyAdmin, async (req, res) => {
+            const id = req.query.id
+            const find = { _id: new ObjectId(id) }
+
+            const update = {
+                $set: {
+                    active: false
+                }
+            }
+
+            const result = await couponsCollection.updateOne(find, update)
+            res.send(result)
+        })
+
+
+        app.put("/api/coupon/active", varifyToken, varifyAdmin, async (req, res) => {
+            const id = req.query.id
+            const find = { _id: new ObjectId(id) }
+
+            const update = {
+                $set: {
+                    active: true
+                }
+            }
+
+            const result = await couponsCollection.updateOne(find, update)
+            res.send(result)
         })
 
 
