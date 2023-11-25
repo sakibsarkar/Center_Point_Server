@@ -5,6 +5,7 @@ const app = express()
 const cors = require("cors")
 const cookieParser = require('cookie-parser')
 const jwt = require("jsonwebtoken")
+const stripe = require("stripe")(process.env.STRIPE)
 
 // middlewere
 app.use(express.json())
@@ -42,6 +43,7 @@ const varifyToken = (req, res, next) => {
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { default: Stripe } = require('stripe')
 const uri = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0.xbiw867.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -87,7 +89,7 @@ async function run() {
 
 
             const result = await usersCollection.findOne({ email: email })
-           
+
             if (!result || result?.role !== "member") {
                 return res.status(401).send({ messege: "unauthorized access" })
             }
@@ -206,7 +208,7 @@ async function run() {
                 return res.status(401).send({ messege: "unAurhorized" })
             }
 
-           
+
 
             const find = {
                 $and: [
@@ -452,6 +454,22 @@ async function run() {
 
             const result = await couponsCollection.updateOne(find, update)
             res.send(result)
+        })
+
+
+
+        // payment intent
+
+        app.post("/api/paymentIntent", async (req, res) => {
+            const { price } = req.body
+            const amount = parseInt(price) * 100
+            const { client_secret } = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: ["card"]
+            })
+
+            res.send({ client_secret })
         })
 
 
