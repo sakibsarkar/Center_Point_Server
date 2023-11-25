@@ -125,7 +125,7 @@ async function run() {
 
 
         // all members data
-        app.get("/api/all/members", async (req, res) => {
+        app.get("/api/all/members", varifyToekn, async (req, res) => {
             const role = req.query.role
             if (role !== "admin" || !role) {
                 return res.status(401).send({ messege: "unAurhorized" })
@@ -159,9 +159,79 @@ async function run() {
                 return res.status(401).send({ messege: "unAurhorized" })
             }
 
-            const result = await agreementsCollection.find({ status: "pending" }).toArray()
+            const result = await agreementsCollection.find().toArray()
             res.send(result)
         })
+
+
+        // -------------member apartment ----------------
+        app.get("/api/member/apartment", varifyToekn, async (req, res) => {
+            const email = req.query.email
+            const role = req.query.role
+
+            if (!role || role !== "member") {
+                return res.status(401).send({ messege: "unAurhorized" })
+            }
+
+            console.log(req.user.email);
+
+            const find = {
+                $and: [
+                    { status: "checked" },
+                    { userEmail: email }
+                ]
+            }
+            const result = await agreementsCollection.findOne(find)
+            res.send(result)
+        })
+
+
+        // ---------member to user--------------
+        // * member will become user
+        // * member booked room will be available
+
+        app.put("api/member/delete", varifyToekn, async (req, res) => {
+            const email = req.query.email
+            const apartmentId = req.query.aptId
+            const role = req.query.role
+
+            if (!role || role !== "admin") {
+                return res.status(401).send({ messege: "unAurhorized" })
+            }
+
+            //---------point 1_--------
+            const roleUpdate = {
+                $set: {
+                    role: "user"
+                }
+            }
+
+
+            const becomeUser = await usersCollection.updateOne({ email: email }, roleUpdate)
+
+            // -------part 2---------
+            const apartmentUpdate = {
+                $set: {
+                    booked: "false"
+                }
+            }
+
+            const apartmentFind = { _id: new ObjectId(apartmentId) }
+
+            const updateApt = await apartmentCollection.updateOne(apartmentFind, apartmentUpdate)
+
+
+
+
+
+
+        })
+
+
+
+
+
+
 
 
         // get user role
@@ -248,6 +318,30 @@ async function run() {
             const totalUser = await usersCollection.find({ role: "user" }).toArray()
             const totalMember = await usersCollection.find({ role: "member" }).toArray()
             res.send({ total, totalBooked, totalBooked: totalBooked.length, totalUser: totalUser.length, totalMember: totalMember.length })
+        })
+
+
+
+        // add aptId to the user data
+        app.put("/api/user/booked", varifyToekn, async (req, res) => {
+            const aptId = req.query.aptID
+            const role = req.query.role
+            const email = req.query.email
+            if (role !== "admin" || !role) {
+                return res.status(401).send({ messege: "unAurhorized" })
+            }
+
+            const find = { email: email }
+
+            const update = {
+                $set: {
+                    apartment: aptId
+                }
+            }
+
+            const reult = await usersCollection.updateOne(find, update)
+            res.send(reult)
+
         })
 
 
