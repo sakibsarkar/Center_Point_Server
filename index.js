@@ -69,6 +69,7 @@ async function run() {
         const announcementsCollection = client.db("centerPoint").collection("announcements")
         const agreementsCollection = client.db("centerPoint").collection("agreements")
         const couponsCollection = client.db("centerPoint").collection("coupons")
+        const paymentHistoryCollection = client.db("centerPoint").collection("paymentHistory")
 
 
         const varifyAdmin = async (req, res, next) => {
@@ -476,7 +477,7 @@ async function run() {
         // get coupon code
         app.get("/api/get/coupon", async (req, res) => {
             const code = req.query.code
-            
+
             if (!code) {
                 return res.send({ value: 0 })
             }
@@ -488,6 +489,15 @@ async function run() {
             res.send(coupon)
         })
 
+
+
+
+        // add payment history to db
+        app.post("/api/payment/history", varifyToken, async (req, res) => {
+            const body = req.body
+            const result = await paymentHistoryCollection.insertOne(body)
+            res.send(result)
+        })
 
 
 
