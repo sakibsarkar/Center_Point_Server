@@ -473,6 +473,22 @@ async function run() {
         })
 
 
+        // get coupon code
+        app.get("/api/get/coupon", async (req, res) => {
+            const code = req.query.code
+            
+            if (!code) {
+                return res.send({ value: 0 })
+            }
+
+            const coupon = await couponsCollection.findOne({ coupon: code })
+            if (!coupon) {
+                return res.send({ invalid: true })
+            }
+            res.send(coupon)
+        })
+
+
 
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
