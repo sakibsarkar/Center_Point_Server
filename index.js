@@ -474,7 +474,7 @@ async function run() {
         })
 
 
-        // get coupon code
+        // get specific coupon code 
         app.get("/api/get/coupon", async (req, res) => {
             const code = req.query.code
 
@@ -499,6 +499,41 @@ async function run() {
             res.send(result)
         })
 
+
+        //load specific users payment history
+        app.get("/api/member/payments", varifyToken, varifyMember, async (req, res) => {
+            const email = req.query.email
+            if (!email) {
+                return
+            }
+
+            if (req.user.email !== email) {
+                return res.status(403).send({ message: "forbiden access" })
+
+            }
+
+            const find = { email: email }
+
+            const result = await paymentHistoryCollection.find(find).toArray()
+
+            res.send(result)
+        })
+
+
+
+        //get all coupon
+        app.get("/api/all/coupon", async (req, res) => {
+            const result = await couponsCollection.find({ active: true }).toArray()
+            res.send(result)
+        })
+
+
+        //add coupon
+        app.post("/api/add/coupon", varifyToken, varifyAdmin, async (req, res) => {
+            const body = req.body
+            const result = await couponsCollection.insertOne(body)
+            res.send(result)
+        })
 
 
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
